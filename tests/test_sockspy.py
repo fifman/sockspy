@@ -3,28 +3,41 @@
 
 """Tests for `sockspy` package."""
 
-import pytest
-
 from click.testing import CliRunner
-
 from sockspy import sockspy
 from sockspy import cli
+import requests
+import time
+import threading
 
 
-@pytest.fixture
-def response():
-    """Sample pytest fixture.
+def try_socks5_proxy(server_host, server_port):
+    proxy = {
+        'http':'socks5://'+server_host+':'+str(server_port),
+        'https':'socks5://'+server_host+':'+str(server_port)
+    }
+    url = 'https://www.baidu.com'
+    return requests.get(url, proxies=proxy)
 
-    See more at: http://doc.pytest.org/en/latest/fixture.html
-    """
-    # import requests
-    # return requests.get('https://github.com/audreyr/cookiecutter-pypackage')
+
+SERVER_HOST = "localhost"
+SERVER_PORT = 3333
 
 
-def test_content(response):
-    """Sample pytest test function with the pytest fixture as an argument."""
-    # from bs4 import BeautifulSoup
-    # assert 'GitHub' in BeautifulSoup(response.content).title.string
+def test_socks5():
+
+    def run_sockspy():
+        sockspy.run(SERVER_HOST, SERVER_PORT)
+
+    thread = threading.Thread(None, run_sockspy, daemon=True)
+    thread.start()
+    time.sleep(2)
+    response = try_socks5_proxy(SERVER_HOST, SERVER_PORT)
+    assert response.status_code == requests.codes.ok
+
+
+def test_run():
+    sockspy.run(SERVER_HOST, SERVER_PORT)
 
 
 def test_command_line_interface():

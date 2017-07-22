@@ -1,30 +1,19 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from selectors import DefaultSelector, EpollSelector, DevpollSelector, KqueueSelector, PollSelector, SelectSelector, EVENT_READ
+from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
+from sockspy.core import context
 from sockspy.core.endpoint import Endpoint
-
-TYPE_DEFAULT = 0
-TYPE_SELECT = 1
-TYPE_POLL = 2
-TYPE_EPOLL = 3
-TYPE_DEVPOLL = 4
-TYPE_KQUEUE = 5
+import logging
 
 
 class EndpointPool:
 
-    def __init__(self, selector_type=TYPE_DEFAULT):
-        self.poller = {
-            TYPE_DEFAULT: DefaultSelector,
-            TYPE_SELECT: SelectSelector,
-            TYPE_POLL: PollSelector,
-            TYPE_EPOLL: EpollSelector,
-            TYPE_DEVPOLL: DevpollSelector,
-            TYPE_KQUEUE: KqueueSelector
-        }.get(selector_type)()
+    def __init__(self, selector_type=DefaultSelector):
+        self.poller = selector_type()
         self.msg_size = 4096
+        self.logger = logging.getLogger(__name__)
 
     def set_listener(self, listener):
         self.listener = listener
@@ -40,15 +29,21 @@ class EndpointPool:
         self.poller.unregister(endpoint)
 
     def poll(self):
-        for (key, events) in self.poller.select():
-            endpoint = key.fileobj
-            if endpoint == self.listener:
-                sock, address = self.listener.accept()
-                self.create_local_endpoint(sock)
-            endpoint.events = events
-            endpoint.ready()
+        while True:
+            for (key, events) in self.poller.select():
+                endpoint = key.fileobj
+                if endpoint == self.listener:
+                    sock, address = self.listener.accept()
+                    self.create_local_endpoint(sock)
+                    continue
+                endpoint.events = events
+                self.logger.debug("[poll]   fd: %s, event: %s", endpoint.fileno(), "event_read" if events & EVENT_READ else "event_write")
+                context.process_endpoint(endpoint)
 
     def create_local_endpoint(self, sock):
         endpoint = Endpoint(sock)
         endpoint.peer = endpoint
         self.register(endpoint, EVENT_READ)
+
+    def set_events(self, endpoint):
+        self.modify(endpoint, EVENT_WRITE | EVENT_READ if len(endpoint.peer.stream)>0 else EVENT_READ)

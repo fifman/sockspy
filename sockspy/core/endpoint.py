@@ -1,10 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import socket
-from selectors import EVENT_WRITE
-from sockspy.core.context import process_endpoint, POOL
-from sockspy.socket.raw import client_socket
+from selectors import EVENT_WRITE, EVENT_READ
+from sockspy.core import context
 
 
 class Endpoint:
@@ -15,27 +13,17 @@ class Endpoint:
         self.local = local
         self.stream = b''
         self.address = address
-
-    def create_remote_endpoint(self):
-        sock = client_socket(self.address)
-        endpoint = Endpoint(sock, False, self.address)
-        self.peer = endpoint
-        endpoint.peer = self
-        POOL.register(endpoint, EVENT_WRITE)
+        self.try_turn = 0
 
     def destroy(self):
-        POOL.unregister(self)
-        self.sock.shutdown(socket.SHUT_RDWR)
+        context.POOL.unregister(self)
         self.sock.close()
 
     def fileno(self):
         return self.sock.fileno()
 
-    def ready(self):
-        process_endpoint(self)
-
     def _read_data(self):
-        data = self.sock.recv(POOL.msg_size)
+        data = self.sock.recv(context.POOL.msg_size)
         if not data:
             raise ReadOrWriteNoDataError()
         return data
@@ -50,10 +38,10 @@ class Endpoint:
         self.stream = self.stream + self._read_data()
 
     def write(self):
-        self.stream = self._write_data(self.peer.stream)
+        self.peer.stream = self._write_data(self.peer.stream)
 
     def switch_events(self):
-        POOL.modify(self, ~ self.events)
+        context.POOL.modify(self, EVENT_WRITE if EVENT_READ & self.events else EVENT_READ)
 
 
 class ReadOrWriteNoDataError(Exception):

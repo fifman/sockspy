@@ -2,94 +2,96 @@
 # -*- coding: utf-8 -*-
 import socket
 from enum import unique, Enum
-from sockspy.core.context import POOL
+from sockspy.core import context
+from sockspy.core.endpoint import Endpoint
 from sockspy.core.engine import SocksEngine, ProtocolStatus
 from selectors import EVENT_WRITE, EVENT_READ
 import logging
 
+from sockspy.socket.raw import client_socket
+
 
 @unique
 class Socks5Status(Enum):
-    Version = 1
-    Method = 2
-    Validated = 3
-    ValidationResponded = 4
-    # Failed = 5
-    Confirmed = 6
+    ValidateMethod = 1
+    MethodValidated = 3
+    ValidateRequest = 4
+    Failed = 5
+    RequestValidated = 6
+    Connecting = 7
 
 
 class Socks5Engine(SocksEngine):
     def __init__(self):
         SocksEngine.__init__(self)
+        self.logger = logging.getLogger(__name__)
 
-    def get_handlers_in_protocol_validation(self, status, endpoint):
-        handler = {
-            (Socks5Status.Init, EVENT_READ): (self.validate_method, self.handle_stop, self.handle_error),
-            (None, EVENT_READ): (self.validate_version, self.handle_stop, self.handle_error),
-            (Socks5Status.Version, EVENT_READ): (self.validate_method, self.handle_stop, self.handle_error),
-            (Socks5Status.Validated, EVENT_WRITE): (self.respond_validation, self.handle_stop, self.handle_error),
-            (Socks5Status.ValidationResponded, EVENT_READ): (self.confirm, self.handle_stop, self.handle_error),
-            (Socks5Status.Confirmed, EVENT_WRITE): (self.respond_confirm, self.handle_stop, self.handle_remote_error)
-        }.get((status, endpoint.events), None)
-        return [] if handler == None else [handler]
-
-    def validate_version(self, endpoint):
-        endpoint.read()
-        if endpoint.stream[0] != b'\x05':
-            self._error_validate_method(endpoint, "Only supports socks5 protocol!", b'\x05\xFF')
-        else:
-            self.set_status(endpoint, Socks5Status.Version)
+    def get_handler_in_protocol_validation(self, status, endpoint):
+        return {
+            None: self.validate_method,
+            Socks5Status.MethodValidated: self.respond_validation,
+            Socks5Status.ValidateRequest: self.validate_request,
+            Socks5Status.Failed: self.error_response,
+            Socks5Status.Connecting: self.handle_connecting
+        }.get(status)
 
     def validate_method(self, endpoint):
+        self.logger.debug("enter validate_method!")
         endpoint.read()
+        if bytearray(endpoint.stream)[0] != 5:
+            self._error_validate_method(endpoint, "Only supports socks5 protocol!", b'\x05\xFF')
+            return
         if len(endpoint.stream) < 3:
             return
-        method_num = int.from_bytes(endpoint.stream[1], 'little')
+        method_num = bytearray(endpoint.stream)[1]
         if method_num > 255 or method_num < 1:
             self._error_validate_method(endpoint, "Number of methods is not in [1,255]!", b'\x05\xFF')
             return
         if len(endpoint.stream) < 2 + method_num:
             return
-        self._validate_method_type(endpoint.stream)
+        self._validate_method_type(endpoint)
 
     def _validate_method_type(self, endpoint):
+        int_stream = bytearray(endpoint.stream)
         # noinspection PyTypeChecker
-        for octet in endpoint.stream[2: (int.from_bytes(endpoint.stream[1],'little')+1)]:
-            if octet == b'\x00':
-                endpoint.stream = b'\x05\x00'
-                self.set_status(endpoint, Socks5Status.Validated)
+        for octet in int_stream[2: int_stream[1] + 2]:
+            if octet == 0:
+                endpoint.peer.stream = b'\x05\x00'
+                self.set_status(endpoint, Socks5Status.MethodValidated)
                 endpoint.switch_events()
                 return
-        self._error_validate_method(endpoint, "Only support 'No authentication required' method!")
+        self._error_validate_method(endpoint, "Only support 'No authentication required' method!", b'\x05\xFF')
 
     def _error_validate_method(self, endpoint, msg, stream):
-        logging.error(msg)
-        endpoint.stream = stream
-        self.set_status(endpoint, Socks5Status.Confirmed)
+        self.logger.error(msg)
+        endpoint.peer.stream = stream
+        self.set_status(endpoint, Socks5Status.Failed)
         endpoint.switch_events()
 
     def respond_validation(self, endpoint):
+        self.logger.debug("enter respond_validation")
         endpoint.write()
-        self.set_status(endpoint, Socks5Status.ValidationResponded)
+        self.set_status(endpoint, Socks5Status.ValidateRequest)
         endpoint.switch_events()
 
-    def confirm(self, endpoint):
+    def validate_request(self, endpoint):
+        self.logger.debug("enter validate_request!")
         endpoint.read()
-        data = endpoint.stream
+        data = bytearray(endpoint.stream)
         if len(data) < 5:
             return
         expect_length = 10
 
         def check_confirm():
-            if data[0] != b'\x05':
+            if data[0] != 5:
                 return "version wrong!"
-            if data[1] not in [b'\x00', b'\x03']:
-                return "protocol should be tcp or udp!"
-            if data[2] != b'\x00':
+            if data[1] not in [1, 3]:
+                return "CMD should be connect or udp associate!"
+            if data[2] != 0:
                 return "rsv wrong!"
-            if data[3] not in [b'\x01', b'\x03']:
+            if data[3] not in [1, 3]:
                 return "atyp wrong!"
-            if data[3] == b'\x03' and int.from_bytes(data[4], "little") < 1:
+            if data[3] == 3 and data[4] < 1:
                 return "length wrong!"
             return None
 
@@ -97,38 +99,72 @@ class Socks5Engine(SocksEngine):
         if msg:
             self._error_validate_method(endpoint, msg, b'\x05\x01\x00\x01\x00\x00\x00\x00\x10\x10')
             return
-        if data[3] == b'\x03':
-            host_length = int.from_bytes(data[4], "little")
-            expect_length = 7 + host_length
+        if data[3] == 3:
+            expect_length = 7 + data[4]
         if len(data) < expect_length:
             return
 
-        if data[3] == b'\x01':
-            ip = socket.inet_ntoa(data[4:7])
-            port = int.from_bytes(data[8:9], 'big')
+        if data[3] == 1:
+            ip = socket.inet_ntoa(endpoint.stream[4:8])
+            port = data[8] * 256 + data[9]
             endpoint.address = (ip, port)
         else:
-            host = bytes.decode(data[5:4 + expect_length])
-            port = int.from_bytes(data[5 + expect_length:6 + expect_length], 'big')
+            host = bytes.decode(endpoint.stream[5:5 + data[4]])
+            port = data[5 + data[4]] * 256 + data[6 + data[4]]
             endpoint.address = (host, port)
-        self.set_status(endpoint, Socks5Status.Confirmed)
-        endpoint.switch_events()
-        pass
+        self.set_status(endpoint, ProtocolStatus.ProtocolValidated)
+        self.create_remote_endpoint(endpoint)
+        endpoint.peer.stream = b'\x05\x00\x00\x01\x00\x00\x00\x00\x10\x10'
+        endpoint.stream = endpoint.stream[expect_length:]
 
-    def respond_confirm(self, endpoint):
+    def error_response(self, endpoint):
+        self.logger.debug("enter error_response!")
         endpoint.write()
         self.set_status(endpoint, ProtocolStatus.ProtocolValidated)
-        endpoint.create_remote_endpoint()
-        POOL.modify(endpoint, EVENT_WRITE | EVENT_READ)
+        context.POOL.modify(endpoint, EVENT_READ)
 
     def handle_stop(self, endpoint):
+        self.logger.debug("enter handle_stop!")
         endpoint.destroy()
 
     def handle_error(self, endpoint, error):
+        self.logger.debug("enter handle_error!")
         self.handle_stop(endpoint)
-        logging.error(repr(error))
+        self.logger.error(repr(error))
 
     def handle_remote_error(self, endpoint, error):
-        logging.error(repr(error))
+        self.logger.debug("enter handle_remote_error!")
+        self.logger.error(repr(error))
         endpoint.peer.destroy()
-        self._error_validate_method(endpoint, "connect to the address wrong!", b'\x05\x01\x00\x01\x00\x00\x00\x00\x10\x10')
+        self._error_validate_method(endpoint, "connect to the address wrong!",
+                                    b'\x05\x01\x00\x01\x00\x00\x00\x00\x10\x10')
+
+    def create_remote_endpoint(self, endpoint):
+        (sock, connecting) = client_socket(endpoint.address)
+        peer = Endpoint(sock, False, endpoint.address)
+        endpoint.peer = peer
+        peer.peer = endpoint
+        peer.connecting = connecting
+        if connecting:
+            self.set_status(peer, Socks5Status.Connecting)
+            context.POOL.register(peer, EVENT_WRITE)
+        else:
+            self.set_status(peer, ProtocolStatus.ProtocolValidated)
+
+    def handle_connecting(self, endpoint):
+        endpoint.peer.try_turn = endpoint.peer.try_turn + 1
+        self.logger.debug("enter handle_connecting!")
+        errno = endpoint.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        if errno != 0:
+            if endpoint.peer.try_turn < context.MAX_CONNECT_TURN:
+                self.create_remote_endpoint(endpoint.peer)
+                endpoint.destroy()
+            else:
+                raise Exception("socket connecting error! errno is " + str(errno))
+        self.set_status(endpoint, ProtocolStatus.ProtocolValidated)
+        context.POOL.set_events(endpoint)
+        context.POOL.set_events(endpoint.peer)
+
+    def handle_remote_error_peer(self, endpoint, error):
+        self.logger.debug("enter handle_remote_error_peer!")
+        self.handle_remote_error(endpoint.peer, error)

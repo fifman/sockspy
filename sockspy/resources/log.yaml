@@ -1,0 +1,30 @@
+version: 1
+formatters:
+    simple:
+        format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    debug:
+        format: '   <<< %(asctime)s - %(message)s'
+        datefmt: '%H:%M:%S'
+handlers:
+    console:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: simple
+        stream: ext://sys.stdout
+    file:
+        class: logging.FileHandler
+        level: DEBUG
+        formatter: debug
+        filename: /var/log/sockspy.log
+        mode: w
+    nil:
+        class: logging.NullHandler
+loggers:
+    sockspy:
+        level: INFO
+        handlers: [console,file]
+        propagate: no
+root:
+    level: DEBUG
+    handlers: [console]
+disable_existing_loggers: false
