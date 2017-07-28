@@ -21,7 +21,7 @@ handlers:
         class: logging.NullHandler
 loggers:
     sockspy:
-        level: INFO
+        level: DEBUG
         handlers: [console,file]
         propagate: no
 root:

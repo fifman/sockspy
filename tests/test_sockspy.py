@@ -2,42 +2,57 @@
 # -*- coding: utf-8 -*-
 
 """Tests for `sockspy` package."""
-
+import multiprocessing
+import pytest
 from click.testing import CliRunner
 from sockspy import sockspy
 from sockspy import cli
 import requests
 import time
-import threading
-
-
-def try_socks5_proxy(server_host, server_port):
-    proxy = {
-        'http':'socks5://'+server_host+':'+str(server_port),
-        'https':'socks5://'+server_host+':'+str(server_port)
-    }
-    url = 'https://www.baidu.com'
-    return requests.get(url, proxies=proxy)
 
 
 SERVER_HOST = "localhost"
 SERVER_PORT = 3333
 
 
-def test_socks5():
+def _try_socks5_proxy(url):
+    proxy = {
+        'http':'socks5://'+SERVER_HOST+':'+str(SERVER_PORT),
+        'https':'socks5://'+SERVER_HOST+':'+str(SERVER_PORT)
+    }
+    return requests.get(url, proxies=proxy)
+
+
+def _try_socks5(url):
 
     def run_sockspy():
-        sockspy.run(SERVER_HOST, SERVER_PORT)
+        sockspy.run()
 
-    thread = threading.Thread(None, run_sockspy, daemon=True)
-    thread.start()
+    process = multiprocessing.Process(target=run_sockspy)
+    process.start()
     time.sleep(2)
-    response = try_socks5_proxy(SERVER_HOST, SERVER_PORT)
+    try:
+        return _try_socks5_proxy(url)
+    finally:
+        process.terminate()
+        process.join()
+
+
+def test_valid_address():
+    response = _try_socks5("https://www.baidu.com")
     assert response.status_code == requests.codes.ok
 
 
+def test_invalid_address():
+    with pytest.raises(Exception) as ex:
+        response = _try_socks5("https://www.baidu.co")
+        assert response.status_code != requests.codes.ok
+    print(repr(ex))
+    assert ex is not None
+
+
 def test_run():
-    sockspy.run(SERVER_HOST, SERVER_PORT)
+    sockspy.run()
 
 
 def test_command_line_interface():
