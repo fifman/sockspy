@@ -5,7 +5,7 @@
 import multiprocessing
 import pytest
 from click.testing import CliRunner
-from sockspy import sockspy
+from sockspy import sockspy_main
 from sockspy import cli
 import requests
 import time
@@ -26,7 +26,7 @@ def _try_socks5_proxy(url):
 def _try_socks5(url):
 
     def run_sockspy():
-        sockspy.run()
+        sockspy_main.run()
 
     process = multiprocessing.Process(target=run_sockspy)
     process.start()
@@ -52,15 +52,15 @@ def test_invalid_address():
 
 
 def test_run():
-    sockspy.run()
+    sockspy_main.run()
 
 
 def test_command_line_interface():
     """Test the CLI."""
     runner = CliRunner()
-    result = runner.invoke(cli.main)
+    result = runner.invoke(cli.sockspy_main)
     assert result.exit_code == 0
     assert 'sockspy.cli.main' in result.output
-    help_result = runner.invoke(cli.main, ['--help'])
+    help_result = runner.invoke(cli.sockspy_main, ['--help'])
     assert help_result.exit_code == 0
     assert '--help  Show this message and exit.' in help_result.output

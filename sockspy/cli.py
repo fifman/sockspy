@@ -3,14 +3,14 @@
 """Console script for sockspy."""
 
 import click
+from sockspy import sockspy_main
 
 
 @click.command()
 def main(args=None):
     """Console script for sockspy."""
-    click.echo("Replace this message by putting your code into "
-               "sockspy.cli.main")
-    click.echo("See click documentation at http://click.pocoo.org/")
+    click.echo("Starting sockspy...")
+    sockspy_main.run()
 
 
 if __name__ == "__main__":
