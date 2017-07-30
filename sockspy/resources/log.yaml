@@ -11,12 +11,12 @@ handlers:
         level: DEBUG
         formatter: simple
         stream: ext://sys.stdout
-    file:
-        class: logging.FileHandler
-        level: DEBUG
-        formatter: debug
-        filename: /var/log/sockspy.log
-        mode: w
+#    file:
+#        class: logging.FileHandler
+#        level: DEBUG
+#        formatter: debug
+#        filename: /var/log/sockspy.log
+#        mode: w
     nil:
         class: logging.NullHandler
 loggers:
