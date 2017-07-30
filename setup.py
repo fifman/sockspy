@@ -12,13 +12,11 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=6.0',
-    # TODO: put package requirements here
+    'Click>=6.0'
 ]
 
 setup_requirements = [
-    'pytest-runner',
-    # TODO(fifman): put setup requirements (distutils extensions, etc.) here
+    'pytest-runner'
 ]
 
 test_requirements = [
@@ -28,7 +26,7 @@ test_requirements = [
 
 setup(
     name='sockspy',
-    version='0.2.0',
+    version='0.2.1',
     description="A python socks5 proxy implementation.",
     long_description=readme + '\n\n' + history,
     author="Fifman Feng",
@@ -41,7 +39,6 @@ setup(
         ]
     },
     include_package_data=True,
-    # package_dir={'':'sockspy'},
     package_data={
         '': ['*.yaml']
     },

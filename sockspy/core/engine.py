@@ -4,11 +4,11 @@ import enum
 import selectors
 import socket
 import time
-
+import abc
+import six
 from sockspy.core import transport
 from sockspy.core import exceptions
 import logging
-
 from sockspy.socket import raw
 
 
@@ -19,31 +19,31 @@ class ProtocolStatus(enum.Enum):
     ProtocolValidated = 999
 
 
-class EndpointEngine(object):
+@six.add_metaclass(abc.ABCMeta)
+class EndpointEngine():
 
-    def __init__(self, pool):
-        self.pool = pool
-
+    @abc.abstractmethod
     def process_event(self, endpoint):
         pass
 
+    @abc.abstractmethod
     def destroy_endpoint(self, endpoint):
         pass
 
+    @abc.abstractmethod
     def accept(self, sock):
         pass
 
+    @abc.abstractmethod
     def destroy(self):
         pass
 
+    @abc.abstractmethod
     def process_loop(self):
         pass
 
 
 class EventHandlerEngine(EndpointEngine):
-
-    def __init__(self, pool):
-        EndpointEngine.__init__(self, pool)
 
     def process_event(self, endpoint):
         try:
@@ -53,12 +53,15 @@ class EventHandlerEngine(EndpointEngine):
         except Exception as ex:
             self.handle_error(endpoint, ex)
 
+    @abc.abstractmethod
     def handle_event(self, endpoint):
         pass
 
+    @abc.abstractmethod
     def handle_stop(self, endpoint):
         pass
 
+    @abc.abstractmethod
     def handle_error(self, endpoint, ex):
         pass
 
@@ -66,9 +69,6 @@ class EventHandlerEngine(EndpointEngine):
 class StatusHandlerEngine(EventHandlerEngine):
 
     STATUS_KEY = "PROTOCOL_STATUS"
-
-    def __init__(self, pool):
-        EndpointEngine.__init__(self, pool)
 
     def handle_event(self, endpoint):
         self.handle_before(endpoint)
@@ -80,6 +80,7 @@ class StatusHandlerEngine(EventHandlerEngine):
             endpoint.write()
         self.handle_after(endpoint)
 
+    @abc.abstractmethod
     def handle_before(self, endpoint):
         pass
 
@@ -87,6 +88,7 @@ class StatusHandlerEngine(EventHandlerEngine):
         status = self.get_status(endpoint)
         self.get_handler_by_status(status, endpoint)(endpoint)
 
+    @abc.abstractmethod
     def get_handler_by_status(self, status, endpoint):
         pass
 
@@ -96,11 +98,15 @@ class StatusHandlerEngine(EventHandlerEngine):
     def set_status(self, endpoint, status):
         endpoint.status[self.STATUS_KEY] = status
 
+    def register_status(self, endpoint, status):
+        endpoint.register_status(self.STATUS_KEY, status)
+
 
 class SocksEngine(StatusHandlerEngine):
+
     def __init__(self, config, pool):
-        StatusHandlerEngine.__init__(self, pool)
         self.logger = logging.getLogger(__name__)
+        self.pool = pool
         self.config = config
         self.active_queue = []
         self.active_queue_start_pos = 0
@@ -116,6 +122,7 @@ class SocksEngine(StatusHandlerEngine):
             return self.handle_remote_connecting
         return self.get_handler_in_protocol_validation(status, endpoint)
 
+    @abc.abstractmethod
     def get_handler_in_protocol_validation(self, status, endpoint):
         pass
 
@@ -136,21 +143,21 @@ class SocksEngine(StatusHandlerEngine):
         self.close_session(endpoint)
         self.logger.error(repr(error))
 
-    def create_remote_endpoint(self, endpoint, address):
-        (sock, connecting) = raw.client_socket(address)
+    def create_remote_endpoint(self, endpoint):
+        (sock, connecting) = raw.client_socket(endpoint.address)
         peer = transport.Endpoint(sock, endpoint.msg_size, False)
         endpoint.peer = peer
         peer.peer = endpoint
         if connecting:
-            peer.register_status(self.STATUS_KEY, ProtocolStatus.Connecting)
+            self.register_status(peer, ProtocolStatus.Connecting)
             self.pool.register(peer, selectors.EVENT_WRITE)
         else:
-            peer.register_status(self.STATUS_KEY, ProtocolStatus.ProtocolValidated)
+            self.register_status(peer, ProtocolStatus.ProtocolValidated)
 
     def accept(self, sock):
         endpoint = transport.Endpoint(sock, self.config.msg_size)
         endpoint.peer = endpoint
-        endpoint.register_status(self.STATUS_KEY, ProtocolStatus.Init)
+        self.register_status(endpoint, ProtocolStatus.Init)
         self.pool.register(endpoint, selectors.EVENT_READ)
         self.update_activity(endpoint)
 

@@ -18,7 +18,6 @@ class Endpoint(object):
         :param sock (`socket.socket`): the socket to be wrapped
         :param msg_size (`int`): the maximal size of the data received by sockets.
         :param local (`boolean`): whether the endpoint is local or not
-        :param address (`turple`): socket address
         """
         self.sock = sock
         self.peer = None # the other side of the tunnel
@@ -26,6 +25,7 @@ class Endpoint(object):
         self.local = local
         self.stream = b'' # store the bytes read from the sock
         self.msg_size = msg_size
+        self.address = None
         self.try_turn = 0
         self.last_active_time = 0
         self.active_queue_index = -1

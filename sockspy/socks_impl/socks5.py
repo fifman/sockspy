@@ -102,8 +102,9 @@ class Socks5Engine(engine.SocksEngine):
             host = bytes.decode(endpoint.stream[5:5 + data[4]])
             port = data[5 + data[4]] * 256 + data[6 + data[4]]
             address = (host, port)
+        endpoint.address = address
         self.set_status(endpoint, engine.ProtocolStatus.ProtocolValidated)
-        self.create_remote_endpoint(endpoint, address)
+        self.create_remote_endpoint(endpoint)
         endpoint.peer.stream = b'\x05\x00\x00\x01\x00\x00\x00\x00\x10\x10'
         endpoint.stream = endpoint.stream[expect_length:]
 
