@@ -3,8 +3,8 @@
 
 language: python
 python:
-  - 3.5
-  - 3.4
+    - 3.5
+    - 3.4
 #  - 3.3
 #  - 2.7
 #  - 2.6
@@ -18,12 +18,12 @@ script: tox
 # After you create the Github repo and add it to Travis, run the
 # travis_pypi_setup.py script to finish PyPI deployment setup
 deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  user: fifman
-  password:
-    secure: PLEASE_REPLACE_ME
-  on:
-    tags: true
-    repo: fifman/sockspy
-    python: 3.4 #2.7
+    provider: pypi
+    distributions: sdist bdist_wheel
+    user: fifman
+    password:
+        secure: PLEASE_REPLACE_ME
+    on:
+        tags: true
+        repo: fifman/sockspy
+        python: 3.4 #2.7
