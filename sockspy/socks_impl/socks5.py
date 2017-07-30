@@ -19,6 +19,9 @@ class Socks5Engine(engine.SocksEngine):
         engine.SocksEngine.__init__(self, config, pool)
         self.logger = logging.getLogger(__name__)
 
+    def handle_before(self, endpoint):
+        pass
+
     def get_handler_in_protocol_validation(self, status, endpoint):
         # self.logger.debug("enter protocol method select!")
         return {

@@ -26,19 +26,19 @@ test_requirements = [
 
 setup(
     name='sockspy',
-    version='0.2.1',
+    version='0.2.4',
     description="A python socks5 proxy implementation.",
     long_description=readme + '\n\n' + history,
     author="Fifman Feng",
     author_email='fifmanyc@gmail.com',
     url='https://github.com/fifman/sockspy',
-    packages=find_packages(include=['sockspy','sockspy.*']),
+    packages=find_packages(include=['sockspy', 'sockspy.*']),
     entry_points={
         'console_scripts': [
             'sockspy=sockspy.cli:main'
         ]
     },
-    include_package_data=True,
+    # include_package_data=True,
     package_data={
         '': ['*.yaml']
     },

@@ -21,10 +21,10 @@ handlers:
         class: logging.NullHandler
 loggers:
     sockspy:
-        level: DEBUG
+        level: INFO
         handlers: [console,file]
         propagate: no
 root:
-    level: DEBUG
+    level: INFO
     handlers: [console]
 disable_existing_loggers: false

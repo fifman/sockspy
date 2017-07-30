@@ -3,6 +3,7 @@
 
 import selectors
 import logging
+import click
 
 
 class EndpointPool(object):
@@ -29,6 +30,7 @@ class EndpointPool(object):
         self.endpoint_set.remove(endpoint)
 
     def poll(self, engine, timeout):
+        click.echo("sockspy started!")
         while True:
             for (key, event) in self.poller.select(timeout):
                 endpoint = key.fileobj
