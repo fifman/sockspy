@@ -22,7 +22,7 @@ handlers:
 loggers:
     sockspy:
         level: INFO
-        handlers: [console,file]
+        handlers: [console]
         propagate: no
 root:
     level: INFO

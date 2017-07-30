@@ -39,7 +39,7 @@ def _try_socks5(url):
 
 
 def test_valid_address():
-    response = _try_socks5("https://www.baidu.com")
+    response = _try_socks5("https://www.bing.com")
     assert response.status_code == requests.codes.ok
 
 
