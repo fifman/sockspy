@@ -26,3 +26,5 @@ deploy:
         tags: true
         repo: fifman/sockspy
         python: 3.4 2.7
+
+sudo: required
