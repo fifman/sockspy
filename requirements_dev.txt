@@ -13,3 +13,4 @@ pytest-runner==2.11.1
 requests>=2.1
 PySocks>=1.5.8
 pyOpenSSL>=0.14
+selectors34>=1.1

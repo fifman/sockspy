@@ -3,7 +3,10 @@
 import socket
 import enum
 from sockspy.core import engine
-import selectors
+try:
+    import selectors
+except ImportError:
+    import selectors34 as selectors
 import logging
 
 
@@ -23,7 +26,6 @@ class Socks5Engine(engine.SocksEngine):
         pass
 
     def get_handler_in_protocol_validation(self, status, endpoint):
-        # self.logger.debug("enter protocol method select!")
         return {
             engine.ProtocolStatus.Init: self.validate_method,
             Socks5Status.MethodValidated: self.method_validated,
@@ -32,7 +34,7 @@ class Socks5Engine(engine.SocksEngine):
         }.get(status)
 
     def validate_method(self, endpoint):
-        self.logger.debug("enter validate_method!")
+        self.logger.debug(str(endpoint.fileno())+" enter validate_method!")
         if bytearray(endpoint.stream)[0] != 5:
             self._error_validate(endpoint, "Only supports socks5 protocol!", b'\x05\xFF')
             return
@@ -64,12 +66,12 @@ class Socks5Engine(engine.SocksEngine):
         self.pool.modify(endpoint, selectors.EVENT_WRITE)
 
     def method_validated(self, endpoint):
-        self.logger.debug("enter method_validated")
+        self.logger.debug(str(endpoint.fileno())+" enter method_validated")
         self.set_status(endpoint, Socks5Status.ValidateRequest)
         self.pool.modify(endpoint, selectors.EVENT_READ)
 
     def validate_request(self, endpoint):
-        self.logger.debug("enter validate_request!")
+        self.logger.debug(str(endpoint.fileno())+" enter validate_request!")
         data = bytearray(endpoint.stream)
         if len(data) < 5:
             return
@@ -112,6 +114,6 @@ class Socks5Engine(engine.SocksEngine):
         endpoint.stream = endpoint.stream[expect_length:]
 
     def error_response(self, endpoint):
-        self.logger.debug("enter error_response!")
+        self.logger.debug(str(endpoint.fileno())+" enter error_response!")
         self.set_status(endpoint, engine.ProtocolStatus.ProtocolValidated)
         self.pool.modify(endpoint, selectors.EVENT_READ)

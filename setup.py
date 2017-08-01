@@ -12,7 +12,8 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=6.0'
+    'Click>=6.0',
+    'selectors34'
 ]
 
 setup_requirements = [
@@ -26,7 +27,7 @@ test_requirements = [
 
 setup(
     name='sockspy',
-    version='0.2.4',
+    version='0.2.7',
     description="A python socks5 proxy implementation.",
     long_description=readme + '\n\n' + history,
     author="Fifman Feng",
@@ -52,8 +53,8 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         # "Programming Language :: Python :: 2",
-        # 'Programming Language :: Python :: 2.6',
-        # 'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
         # 'Programming Language :: Python :: 3',
         # 'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',

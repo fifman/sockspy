@@ -1,7 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import selectors
+try:
+    import selectors
+except ImportError:
+    import selectors34 as selectors
 import logging
 import click
 
@@ -38,9 +41,11 @@ class EndpointPool(object):
                     sock, address = self.listener.accept()
                     engine.accept(sock)
                 else:
+                    if endpoint.closed: # `closed` flag is used to decide whether needs handling.
+                        continue
                     endpoint.event = event
                     self.logger.debug("[poll]   fd: %s, event: %s", endpoint.fileno(),
-                                      "event_read" if event & selectors.EVENT_READ else "event_write")
+                                      "read" if event & selectors.EVENT_READ else "write")
                     engine.process_event(endpoint)
             engine.process_loop()
 

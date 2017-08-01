@@ -30,9 +30,11 @@ class Endpoint(object):
         self.last_active_time = 0
         self.active_queue_index = -1
         self.status = {}
+        self.closed = False # It's possible that endpoint is closed (e.g. closed by `engine.close_session()`) before handling, this flag is used to decide whether the endpoint needs to handle.
 
     def destroy(self):
         self.sock.close()
+        self.closed = True
 
     def fileno(self):
         return self.sock.fileno()
