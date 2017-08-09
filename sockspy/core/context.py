@@ -4,8 +4,9 @@ import signal
 import sys
 
 from sockspy.core import pool
-from sockspy.socket import raw
+from sockspy.socket_tools import raw
 import logging
+import traceback
 
 
 class AppContext(object):
@@ -23,17 +24,27 @@ class AppContext(object):
 
         def handle_signal(sig, _):
             self.logger.debug("destroy engine with signal: " + str(sig))
-            self.engine.destroy()
-            sys.exit(0)
+            # self.engine.destroy()
+            # sys.exit(0)
             # Refer to PEP 475, user case 2, should raise an exception to stop the process
-            # raise KeyboardInterrupt("interrupt by signal!")
+            raise KeyboardInterrupt("interrupt by signal!")
 
         signal.signal(signal.SIGINT, handle_signal)
         signal.signal(signal.SIGTERM, handle_signal)
 
+        result_code = 0
         try:
             self.pool.set_listener(raw.server_socket(self.config.address, self.config.backlog))
             self.pool.poll(self.engine, self.config.timeout)
-        except Exception as ex:
-            self.logger.error("<<< context error!\n" + repr(ex))
-            sys.exit(1)
+        except SystemExit:
+            pass
+        except KeyboardInterrupt:
+            pass
+        except InterruptedError:
+            pass
+        except:
+            self.logger.error("<<< context error!\n" + traceback.format_exc())
+            result_code = 1
+        finally:
+            self.engine.destroy()
+            sys.exit(result_code)

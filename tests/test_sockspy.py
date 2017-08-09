@@ -2,13 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """Tests for `sockspy` package."""
-import multiprocessing
-import pytest
+import multiprocessing, os, signal, pytest, requests, time
 from click.testing import CliRunner
-from sockspy import sockspy_main
 from sockspy import cli
-import requests
-import time
 
 
 SERVER_HOST = "localhost"
@@ -20,47 +16,81 @@ def _try_socks5_proxy(url):
         'http':'socks5://'+SERVER_HOST+':'+str(SERVER_PORT),
         'https':'socks5://'+SERVER_HOST+':'+str(SERVER_PORT)
     }
-    return requests.get(url, proxies=proxy)
+    return requests.get(url, proxies=proxy, timeout=3)
 
 
-def _try_socks5(url):
+def _try_socks5(test_server):
 
     def run_sockspy():
-        sockspy_main.run()
+        runner = CliRunner()
+        result = runner.invoke(cli.main, ["--verbose", 2])
+        print(result.output)
+        assert result.exit_code == 0
 
-    process = multiprocessing.Process(target=run_sockspy)
+    _wrap_test(2, run_sockspy, test_server)
+
+
+def test_valid_address():
+
+    def test_server():
+        response = _try_socks5_proxy("https://www.bing.com")
+        assert response.status_code == requests.codes.ok
+
+    _try_socks5(test_server)
+
+
+def test_invalid_address():
+
+    def test_server():
+        with pytest.raises(Exception) as ex:
+            response = _try_socks5_proxy("https://www.baidu.co")
+            assert response.status_code != requests.codes.ok
+        assert ex is not None
+
+    _try_socks5(test_server)
+
+
+def _wrap_test(sec, cb_test, cb_com=None):
+    pid = os.getpid()
+
+    def cb_kill():
+        time.sleep(sec)
+        if cb_com:
+            cb_com()
+        os.kill(pid, signal.SIGINT)
+
+    process = multiprocessing.Process(target=cb_kill)
     process.start()
-    time.sleep(2)
     try:
-        return _try_socks5_proxy(url)
+        cb_test()
     finally:
         process.terminate()
         process.join()
 
 
-def test_valid_address():
-    response = _try_socks5("https://www.baidu.com")
-    assert response.status_code == requests.codes.ok
-
-
-def test_invalid_address():
-    with pytest.raises(Exception) as ex:
-        response = _try_socks5("https://www.baidu.co")
-        assert response.status_code != requests.codes.ok
-    print(repr(ex))
-    assert ex is not None
-
-
-def test_run():
-    sockspy_main.run()
-
-
+# host, port, timeout, itimeout, qsize, backlog, maxtry, bsize, verbose, logfile=None, logcfgfile = None, cfgfile=None
 def test_command_line_interface():
-    """Test the CLI."""
-    runner = CliRunner()
-    result = runner.invoke(cli.sockspy_main)
-    assert result.exit_code == 0
-    assert 'sockspy.cli.main' in result.output
-    help_result = runner.invoke(cli.sockspy_main, ['--help'])
-    assert help_result.exit_code == 0
-    assert '--help  Show this message and exit.' in help_result.output
+
+    def cli_test():
+        runner = CliRunner()
+        result = runner.invoke(cli.main, [
+            "--timeout", 10,
+            "--itimeout", 60,
+            "--host", "localhost",
+            "--port", 3333,
+            "--qsize", 100,
+            "--backlog", 1024,
+            "--maxtry", 3,
+            "--bsize", 4096,
+            "--verbose", 2,
+            "--logfile", "/var/log/sockspy",
+            "--logcfgfile", "tests/log.yaml"
+        ])
+        assert result.exit_code == 0
+        assert 'started' in result.output               # server successfully started
+        assert 'debug started' in result.output
+        help_result = runner.invoke(cli.main, ['--help'])
+        assert help_result.exit_code == 0
+        assert 'Simple python implementation of a socks5 proxy server.' in help_result.output
+
+    _wrap_test(3, cli_test)

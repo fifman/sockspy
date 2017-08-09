@@ -3,6 +3,10 @@
 
 import socket
 
+import errno
+
+import six
+
 
 def server_socket(address, backlog=5):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -19,6 +23,9 @@ def client_socket(address):
     in_blocking = False
     try:
         sock.connect(address)
-    except BlockingIOError:
-        in_blocking = True
+    except Exception as ex:
+        if ex.args[0] in [errno.EWOULDBLOCK, errno.EINPROGRESS]:
+            in_blocking = True
+        else:
+            six.raise_from(ex, None)
     return (sock, in_blocking)

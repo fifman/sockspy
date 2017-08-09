@@ -1,15 +1,20 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 import enum
-import selectors
+try:
+    import selectors
+except ImportError:
+    import sockspy.core.selectors2 as selectors
 import socket
 import time
 import abc
+import traceback
+
 import six
 from sockspy.core import transport
 from sockspy.core import exceptions
 import logging
-from sockspy.socket import raw
+from sockspy.socket_tools import raw
 
 
 @enum.unique
@@ -135,13 +140,13 @@ class SocksEngine(StatusHandlerEngine):
             self.pool.modify(endpoint, selectors.EVENT_READ)
 
     def handle_stop(self, endpoint):
-        self.logger.debug("enter handle_stop!")
+        self.logger.debug(str(endpoint.fileno()) + " enter handle_stop!")
         self.close_session(endpoint)
 
     def handle_error(self, endpoint, error):
-        self.logger.debug("enter handle_error!")
+        self.logger.error("handle error:\n"+traceback.format_exc())
+        self.logger.debug(str(endpoint.fileno()) + " enter handle_error!")
         self.close_session(endpoint)
-        self.logger.error(repr(error))
 
     def create_remote_endpoint(self, endpoint):
         (sock, connecting) = raw.client_socket(endpoint.address)
@@ -207,12 +212,13 @@ class SocksEngine(StatusHandlerEngine):
 
     def handle_remote_connecting(self, endpoint):
         endpoint.peer.try_turn = endpoint.peer.try_turn + 1
-        self.logger.debug("enter handle_remote_connecting!")
+        self.logger.debug(str(endpoint.fileno()) + " enter handle_remote_connecting!")
         errno = endpoint.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if errno != 0:
             if endpoint.peer.try_turn < self.config.max_try_turn:
                 self.create_remote_endpoint(endpoint.peer)
-                endpoint.destroy()
+                self.destroy_endpoint(endpoint)
+                return
             else:
                 raise Exception("socket connecting error! errno is " + str(errno))
         self.set_status(endpoint, ProtocolStatus.ProtocolValidated)
