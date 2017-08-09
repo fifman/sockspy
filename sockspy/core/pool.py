@@ -4,7 +4,7 @@
 try:
     import selectors
 except ImportError:
-    import selectors34 as selectors
+    import sockspy.core.selectors2 as selectors
 import logging
 import click
 
@@ -34,6 +34,7 @@ class EndpointPool(object):
 
     def poll(self, engine, timeout):
         click.echo("sockspy started!")
+        self.logger.debug("debug started!")
         while True:
             for (key, event) in self.poller.select(timeout):
                 endpoint = key.fileobj

@@ -4,7 +4,7 @@ import enum
 try:
     import selectors
 except ImportError:
-    import selectors34 as selectors
+    import sockspy.core.selectors2 as selectors
 import socket
 import time
 import abc
@@ -14,7 +14,7 @@ import six
 from sockspy.core import transport
 from sockspy.core import exceptions
 import logging
-from sockspy.sockettools import raw
+from sockspy.socket_tools import raw
 
 
 @enum.unique

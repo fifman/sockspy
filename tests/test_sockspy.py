@@ -23,7 +23,8 @@ def _try_socks5(test_server):
 
     def run_sockspy():
         runner = CliRunner()
-        result = runner.invoke(cli.main)
+        result = runner.invoke(cli.main, ["--verbose", 2])
+        print(result.output)
         assert result.exit_code == 0
 
     _wrap_test(2, run_sockspy, test_server)
@@ -87,9 +88,9 @@ def test_command_line_interface():
         ])
         assert result.exit_code == 0
         assert 'started' in result.output               # server successfully started
+        assert 'debug started' in result.output
         help_result = runner.invoke(cli.main, ['--help'])
         assert help_result.exit_code == 0
         assert 'Simple python implementation of a socks5 proxy server.' in help_result.output
 
     _wrap_test(3, cli_test)
-

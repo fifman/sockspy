@@ -38,7 +38,7 @@ def get_default_log_config():
             "sockspy": {
                 "level": "ERROR",
                 "handlers": ["console"],
-                "propagate": "no"
+                "propagate": False
             }
         },
         "root": {

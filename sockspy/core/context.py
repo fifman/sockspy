@@ -4,7 +4,7 @@ import signal
 import sys
 
 from sockspy.core import pool
-from sockspy.sockettools import raw
+from sockspy.socket_tools import raw
 import logging
 import traceback
 
