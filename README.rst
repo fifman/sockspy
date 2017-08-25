@@ -17,6 +17,10 @@ sockspy
      :target: https://pyup.io/repos/github/fifman/sockspy/
      :alt: Updates
 
+.. image:: https://coveralls.io/repos/github/fifman/sockspy/badge.svg?branch=master
+    :target: https://coveralls.io/github/fifman/sockspy?branch=master
+
+
 
 A python socks5 proxy implementation.
 
