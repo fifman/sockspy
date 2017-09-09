@@ -1,14 +1,12 @@
 """ Just a migration from python 3 module selectors to compatible with python 2.
 """
 
-
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, Mapping
 import math
 import select
 import sys
 import six
-
 
 # generic events, that must be mapped to implementation-specific ones
 EVENT_READ = (1 << 0)
@@ -34,7 +32,7 @@ def _fileobj_to_fd(fileobj):
             fd = int(fileobj.fileno())
         except (AttributeError, TypeError, ValueError):
             six.raise_from(ValueError("Invalid file object: "
-                             "{!r}".format(fileobj)), None)
+                                      "{!r}".format(fileobj)), None)
     if fd < 0:
         raise ValueError("Invalid file descriptor: {}".format(fd))
     return fd
@@ -376,7 +374,6 @@ if hasattr(select, 'poll'):
                     ready.append((key, events & key.events))
             return ready
 
-
 if hasattr(select, 'epoll'):
 
     class EpollSelector(_BaseSelectorImpl):
@@ -449,7 +446,6 @@ if hasattr(select, 'epoll'):
             self._epoll.close()
             super(EpollSelector, self).close()
 
-
 if hasattr(select, 'devpoll'):
 
     class DevpollSelector(_BaseSelectorImpl):
@@ -506,7 +502,6 @@ if hasattr(select, 'devpoll'):
         def close(self):
             self._devpoll.close()
             super(DevpollSelector, self).close()
-
 
 if hasattr(select, 'kqueue'):
 
@@ -582,7 +577,6 @@ if hasattr(select, 'kqueue'):
         def close(self):
             self._kqueue.close()
             super(KqueueSelector, self).close()
-
 
 # Choose the best implementation, roughly:
 #    epoll|kqueue|devpoll > poll > select.

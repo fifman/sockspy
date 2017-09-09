@@ -144,7 +144,7 @@ class SocksEngine(StatusHandlerEngine):
         self.close_session(endpoint)
 
     def handle_error(self, endpoint, error):
-        self.logger.error("handle error:\n"+traceback.format_exc())
+        self.logger.error("handle error:\n" + traceback.format_exc())
         self.logger.debug(str(endpoint.fileno()) + " enter handle_error!")
         self.close_session(endpoint)
 
@@ -176,18 +176,18 @@ class SocksEngine(StatusHandlerEngine):
     def check_timeout(self):
         pos = self.active_queue_start_pos
         length = len(self.active_queue)
-        while pos<length:
+        while pos < length:
             endpoint = self.active_queue[pos]
             if not endpoint:
-                pos = pos+1
+                pos = pos + 1
                 continue
             now = time.time()
-            if now-endpoint.last_active_time > self.config.endpoint_timeout:
+            if now - endpoint.last_active_time > self.config.endpoint_timeout:
                 self.logger.debug("destroy endpoint: " + str(endpoint.fileno()))
                 self.close_session(endpoint)
-                pos = pos+1
+                pos = pos + 1
             else:
-                if pos > self.config.max_queue_size or pos > (length>>1):
+                if pos > self.config.max_queue_size or pos > (length >> 1):
                     self.active_queue = self.active_queue[pos:]
                     for ele in self.pool.endpoint_set:
                         ele.active_queue_index = ele.active_queue_index - pos
@@ -229,7 +229,7 @@ class SocksEngine(StatusHandlerEngine):
 
     def process_loop(self):
         now = time.time()
-        if now-self.last_check_timeout_time > self.config.timeout:
+        if now - self.last_check_timeout_time > self.config.timeout:
             self.check_timeout()
             self.last_check_timeout_time = now
 

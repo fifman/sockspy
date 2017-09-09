@@ -20,17 +20,17 @@ class Endpoint(object):
         :param local (`boolean`): whether the endpoint is local or not
         """
         self.sock = sock
-        self.peer = None # the other side of the tunnel
-        self.event = None # record the current event (`EVENT_READ` or `EVENT_WRITE`) when the endpoint is polled out.
+        self.peer = None  # the other side of the tunnel
+        self.event = None  # record the current event (`EVENT_READ` or `EVENT_WRITE`) when the endpoint is polled out.
         self.local = local
-        self.stream = b'' # store the bytes read from the sock
+        self.stream = b''  # store the bytes read from the sock
         self.msg_size = msg_size
         self.address = None
         self.try_turn = 0
         self.last_active_time = 0
         self.active_queue_index = -1
         self.status = {}
-        self.closed = False # It's possible that endpoint is closed (e.g. closed by `engine.close_session()`) before handling, this flag is used to decide whether the endpoint needs to handle.
+        self.closed = False  # It's possible that endpoint is closed (e.g. closed by `engine.close_session()`) before handling, this flag is used to decide whether the endpoint needs to handle.
 
     def destroy(self):
         self.sock.close()
@@ -59,12 +59,15 @@ class Endpoint(object):
 
     def register_status(self, key, value):
         if key in self.status:
-            raise exceptions.StatusRegisterError("Other protocols/engines have already registered a status with this key {}. Choose another key instead!".format(str(key)))
+            raise exceptions.StatusRegisterError(
+                "Other protocols/engines have already registered a status with this key {}. Choose another key instead!".format(
+                    str(key)))
         self.status[key] = value
 
     def change_status(self, key, value):
         if key not in self.status:
-            raise exceptions.StatusRegisterError("You have not registered a status with this key {} yet, need registration first!".format(str(key)))
+            raise exceptions.StatusRegisterError(
+                "You have not registered a status with this key {} yet, need registration first!".format(str(key)))
         self.status[key] = value
 
     def get_status(self, key):

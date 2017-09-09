@@ -10,7 +10,6 @@ import click
 
 
 class EndpointPool(object):
-
     def __init__(self, selector_type=selectors.DefaultSelector):
         self.listener = None
         self.poller = selector_type()
@@ -42,7 +41,7 @@ class EndpointPool(object):
                     sock, address = self.listener.accept()
                     engine.accept(sock)
                 else:
-                    if endpoint.closed: # `closed` flag is used to decide whether needs handling.
+                    if endpoint.closed:  # `closed` flag is used to decide whether needs handling.
                         continue
                     endpoint.event = event
                     self.logger.debug("[poll]   fd: %s, event: %s", endpoint.fileno(),
@@ -51,7 +50,8 @@ class EndpointPool(object):
             engine.process_loop()
 
     def set_events(self, endpoint):
-        self.modify(endpoint, selectors.EVENT_WRITE | selectors.EVENT_READ if len(endpoint.peer.stream) > 0 else selectors.EVENT_READ)
+        self.modify(endpoint, selectors.EVENT_WRITE | selectors.EVENT_READ if len(
+            endpoint.peer.stream) > 0 else selectors.EVENT_READ)
 
     def remove_listener(self):
         self.poller.unregister(self.listener)

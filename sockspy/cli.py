@@ -18,7 +18,7 @@ from sockspy.core import app_config
 @click.option("--logfile", help="Log message level,\n    0: only print error message;\n   1: print info message;\n   2: print debug message.")
 @click.option("--logcfgfile", help="yaml file to config logger.")
 @click.option("--cfgfile", help="yaml file to read config from.")
-def main(host, port, timeout, itimeout, qsize, backlog, maxtry, bsize, verbose, logfile=None, logcfgfile = None, cfgfile=None):
+def main(host, port, timeout, itimeout, qsize, backlog, maxtry, bsize, verbose, logfile=None, logcfgfile=None, cfgfile=None):
     """Simple python implementation of a socks5 proxy server. """
 
     dict_cfg = {}
@@ -30,15 +30,15 @@ def main(host, port, timeout, itimeout, qsize, backlog, maxtry, bsize, verbose, 
 
     cfg = app_config.Config(
         address=(get_param("host", host, "localhost"), get_param("port", port, 3333)),
-        timeout= get_param("timeout", timeout, 10),
-        msg_size = get_param("bsize", bsize, 4096),
-        max_try_turn = get_param("maxtry", maxtry, 3),
-        backlog = get_param("backlog", backlog, 1024),
-        max_queue_size = get_param("qsize", qsize, 100),
-        endpoint_timeout = get_param("itimeout", itimeout, 60),
-        verbose = get_param("verbose", verbose, 0),
-        logfile = get_param("logfile", logfile, None),
-        logcfgfile = get_param("logcfgfile", logcfgfile, None)
+        timeout=get_param("timeout", timeout, 10),
+        msg_size=get_param("bsize", bsize, 4096),
+        max_try_turn=get_param("maxtry", maxtry, 3),
+        backlog=get_param("backlog", backlog, 1024),
+        max_queue_size=get_param("qsize", qsize, 100),
+        endpoint_timeout=get_param("itimeout", itimeout, 60),
+        verbose=get_param("verbose", verbose, 0),
+        logfile=get_param("logfile", logfile, None),
+        logcfgfile=get_param("logcfgfile", logcfgfile, None)
     )
     click.echo("Starting sockspy...")
     sockspy_main.run(cfg)
